@@ -8,8 +8,10 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = os.getenv("MONGO_URI")
-app.secret_key = os.getenv("SECRET_KEY")
+
+mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/student_db")
+app.config["MONGO_URI"] = mongo_uri
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
 
 mongo = PyMongo(app)
 
@@ -55,6 +57,21 @@ def update_student(student_id):
 def delete_student(student_id):
     mongo.db.students.delete_one({"_id": ObjectId(student_id)})
     return redirect(url_for('index'))
+
+# Health check -> verify MongoDB connectivity
+@app.route('/health')
+def health():
+    try:
+        mongo.db.command("ping")
+        return {
+            "status": "healthy",
+            "mongodb": "connected"
+        }, 200
+    except Exception:
+        return {
+            "status": "unhealthy",
+            "mongodb": "disconnected"
+        }, 503
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", debug=True, port=5000)
